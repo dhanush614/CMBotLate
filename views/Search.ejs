@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Spring Boot - Angular Application</title>
+        <base href="/" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" />
+        <link rel="stylesheet" href="https://cdn.datatables.net/buttons/1.6.2/css/buttons.dataTables.min.css" />
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="lib/font-awesome/css/all.css" />
+        <link rel="stylesheet" href="lib/font-awesome/css/fontawesome.min.css" />
+        <link rel="stylesheet" href="css/style.css" />
+    </head>
+    <body class="bg">
+        <div class="container-fluid p-2">
+            <h1 class="h1 text-center text-light font-italic"><%= Title %> Results</h1>
+        </div>
+        <div class="container p-2">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card p-2 font-italic font-weight-bold">
+                        <table id="MyTable" class="table bg-light table-bordered table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <% for(var j=0; j < columnHeader.length; j++) { %>
+                                    <th style="width: 15%;" class="text-center"><%= columnHeader[j] %></th>
+                                    <% } %>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% for(var i=0; i < search.length; i++) { %>
+                                <tr>
+                                    <% for(var j=0; j < symbolicName.length; j++) { %> <% if (search[i][symbolicName[j]].includes('https://') || search[i][symbolicName[j]].includes('http://')) { %>
+                                    <th class="text-left"><a class="url" id="url" target="_blank" href="<%= search[i][symbolicName[j]] %>">Click here to open</a></th>
+                                    <%} else { %>
+
+                                    <th class="text-left"><%= search[i][symbolicName[j]] %></th>
+                                    <% } %> <% } %>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.6.2/js/dataTables.buttons.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.flash.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.print.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var table = $("#MyTable").DataTable({
+                dom: "Bfrtip",
+                buttons: [
+                    {
+                        extend: "csv",
+                        text: '<span><i class="fas fa-file-csv fa-2x"></i></span>',
+                        className: "btn btn-default btn-xs",
+                        titleAttr: "Export to csv"
+                    },
+                    {
+                        extend: "excel",
+                        text: '<span><i class="fas fa-file-excel fa-2x"></i></span>',
+                        className: "btn btn-default btn-xs",
+                        titleAttr: "Export to excel"
+                    },
+                    {
+                        extend: "pdf",
+                        text: '<span><i class="fas fa-file-pdf fa-2x"></i></span>',
+                        className: "btn btn-default btn-xs",
+                        titleAttr: "Export to pdf"
+                    },
+                    {
+                        extend: "print",
+                        text: '<span><i class="fas fa-print fa-2x"></i></span>',
+                        className: "btn btn-default btn-xs",
+                        titleAttr: "Print"
+                    }
+                ],
+                pageLength: 8,
+                initComplete: function () {
+                    this.api()
+                        .columns()
+                        .every(function () {
+                            var column = this;
+                            var select = $('<select><option value=""></option></select>')
+                                .appendTo($(column.footer()).empty())
+                                .on("change", function () {
+                                    var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                                    //to select and search from grid
+                                    column.search(val ? "^" + val + "$" : "", true, false).draw();
+                                });
+
+                            column
+                                .data()
+                                .unique()
+                                .sort()
+                                .each(function (d, j) {
+                                    select.append('<option value="' + d + '">' + d + "</option>");
+                                });
+                        });
+                },
+            });
+            table.buttons().container().appendTo($(".col-sm-6:eq(0)", table.table().container()));
+        });
+    </script>
+    <!-- <script>
+            var a = document.getElementById("url");
+            var href = document.getElementById("url").getAttribute("href");
+            a.onclick = function(href){
+                open(href);
+            }
+            function open(url){
+                return window.open(url);
+            }
+    </script> -->
+</html>
