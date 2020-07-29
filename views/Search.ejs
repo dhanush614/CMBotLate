@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>Spring Boot - Angular Application</title>
+        <title><%= Title %> Report</title>
         <base href="/" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" />
@@ -56,9 +56,10 @@
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.html5.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/buttons/1.5.2/js/buttons.print.min.js"></script>
     <script type="text/javascript">
+            var exportButtonFlag = <%= exportButtonFlag  %>;
         $(document).ready(function () {
             var table = $("#MyTable").DataTable({
-                dom: "Bfrtip",
+                dom: exportButtonFlag?"Bfrtip":"frtip",
                 buttons: [
                     {
                         extend: "csv",

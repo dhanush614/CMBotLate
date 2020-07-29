@@ -75,268 +75,7 @@
 	    var cookie = req.cookies.authToken;	  */   
 	    next();
 	});
-
-	const storage = multer.diskStorage({
-	    destination: process.env.MULTER_DESTINATION,
-	    filename: function(req, file, cb) {
-	        cb(null, file.originalname);
-	    }
-	});
-
-	const upload = multer({
-	    storage: storage
-	}).single('filename');
-
-	app.post('/api/upload', (req, res) => {
-	    var filep = "";
-	    upload(req, res, (err) => {
-	        if (err) {
-	            return res.status(400).send(err);
-	        } else {
-	            if (req.file === undefined) {
-	                return res.send('not selecting files');
-	            }
-	            filep = path.join(__dirname, "./public/uploads/" + req.file.filename);
-	            var claimNumber = JSON.parse(req.body.claimNumber);
-	            const options = {
-	                method: "POST",
-	                url: process.env.FILE_UPLOAD_API,
-	                headers: {
-	                    "Content-Type": "multipart/form-data",
-	                    'Authorization': req.cookies.authToken
-	                },
-	                formData: {
-	                    "uploadFile": fs.createReadStream(filep),
-	                    "claimNumber": claimNumber.claimNumber,
-	                    "fileName": req.file.filename,
-	           			"propertyData": parsedEnvData
-	                }
-	            };
-	            request(options, function(err, httpResponse, body) {
-	                if (err)
-	                    return res.status(400).send(err);
-	                else
-	                    return res.send(body);
-	            });
-	            fs.unlink(filep, err => console.log(err));
-	        }
-	    });
-	});
-	var caseSearchData='';
-	var caseHistoryData='';
-	var caseStatusData='';
-	var documentSearchData='';
-	var searchSymbolicNames = '';
-	var searchColumnHeaders = '';
-	var statusSymbolicNames = '';
-	var statusColumnHeaders = '';
-	var historySymbolicNames = '';
-	var historyColumnHeaders = '';
-	var documentSymbolicNames = '';
-	var documentColumnHeaders = '';
-	var searchAction= '';
-	var caseSearchTitle='';
-	var caseStatusTitle='';
-	var caseHistoryTitle='';
-	var documentSearchTitle='';
 	
-	app.post('/api/documentSearch', (req, res) => {
-		var claimNumber = req.body.claimNumber;
-		searchAction = req.body.action;
-		var actionTaken = searchAction.toString().toUpperCase();
-	    documentSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-		documentColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-		documentSearchTitle = process.env.DOCUMENT_SEARCH_TITLE
-	    request.post({
-	        url: process.env.DOCUMENT_SEARCH_API + claimNumber,
-	        headers: {
-	            'Authorization': req.cookies.authToken
-	        },
-			formData: {
-	           'propertyData': parsedEnvData
-	        }
-	    }, function(error, response, body) {
-	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-				documentSearchData = JSON.parse(body);
-				var tokenUpdated = token.replace('==', '');
-	            var encryptedStr = req.cookies[tokenUpdated];
-				res.send({body,encryptedStr});
-	        } else {
-	            res.status(400).send(error);
-	        }
-	    });
-	});
-
-
-	app.post('/api/search', (req, res) => {
-	    var claimNumber = req.body.claimNumber;
-		searchAction = req.body.action;
-		var actionTaken = searchAction.toString().toUpperCase();
-		console.log(actionTaken);
-		if(searchAction=='claimSearch'){
-			searchSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-			searchColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-			caseSearchTitle = process.env[`${actionTaken}_TITLE`];		
-		}else if(searchAction=='claimStatus'){
-			statusSymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-			statusColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-			caseStatusTitle = process.env[`${actionTaken}_TITLE`];		
-		}else if(searchAction=='claimHistory'){
-			historySymbolicNames = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
-			historyColumnHeaders = process.env[`${actionTaken}_HEADERS`].toString().split(',');
-			caseHistoryTitle = process.env[`${actionTaken}_TITLE`];
-		}
-	    
-	    request.post({
-	        url: 'http://localhost:8080/search',
-	        headers: {
-	            'Authorization': req.cookies.authToken
-			},
-			formData: {	                    
-	                    "claimNumber": claimNumber,
-						"searchAction": actionTaken,
-	           			"propertyData": parsedEnvData
-	        }
-	    }, function(error, response, body) {
-	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-				if(searchAction=='claimSearch'){
-					caseSearchData = JSON.parse(body);
-				}else if(searchAction=='claimStatus'){
-					caseStatusData = JSON.parse(body);
-				}else if(searchAction=='claimHistory'){
-					caseHistoryData = JSON.parse(body);
-				}
-	            var tokenUpdated = token.replace('==', '');
-	            var encryptedStr = req.cookies[tokenUpdated];
-	            res.send(encryptedStr);
-	        } else {
-				console.log(error);
-	            res.status(401).send(error);
-	        }
-	    });
-	});
-	var queryKey="";
-	var verifyToken = function(req, res, next) {
-	    var tokenStr = req.cookies.authToken;
-        queryKey=Object.keys(req.query)[0];
-	    var urlToken = req.query[queryKey];
-	    if (tokenStr == undefined || urlToken == undefined) {
-	        res.status(401).send('Your dont have permissions to access this page');
-	    } else if (tokenStr == null || urlToken == null) {
-	        res.status(401).send('Your dont have permissions to access this page');
-	    } else {
-	        var tokenUpdated = tokenStr.replace('==', '');
-	        var encryptedStr = req.cookies[tokenUpdated];
-	        if (encryptedStr.trim() != urlToken.trim()) {
-	            res.status(401).send('Your dont have permissions to access this page');
-	        } else {
-	            next();
-	        }
-	    }
-	}
-
-	app.get('/search', verifyToken, (req, res) => {
-		if(queryKey=='claimSearch'){
-				 res.render('Search', {
-		        'search': caseSearchData,
-		        'symbolicName': searchSymbolicNames,
-				'columnHeader': searchColumnHeaders,
-				'Title':caseSearchTitle
-		    })
-		}else if(queryKey=='claimStatus'){
-				res.render('Search', {
-		        'search': caseStatusData,
-		        'symbolicName': statusSymbolicNames,
-				'columnHeader': statusColumnHeaders,
-				'Title': caseStatusTitle
-		    });
-		}else if(queryKey=='claimHistory'){
-				 res.render('Search', {
-		        'search': caseHistoryData,
-		        'symbolicName': historySymbolicNames,
-				'columnHeader': historyColumnHeaders,
-				'Title':caseHistoryTitle
-		    });		
-		}else{
-				 res.render('Search', {
-		        'search': documentSearchData,
-		        'symbolicName': documentSymbolicNames,
-				'columnHeader': documentColumnHeaders,
-				'Title': documentSearchTitle
-		    });		
-		}
-	});
-
-	app.post('/api/validateclaim', function(req, res) {
-	    var claimNumber = req.body.claimNumber;
-	    request.post({
-	        url: process.env.VALIDATE_CLAIM_API + claimNumber,
-	        headers: {
-	            'Authorization': req.cookies.authToken
-	        },
-			formData: {
-	           'propertyData': parsedEnvData
-	        }
-	    }, function(error, response, body) {
-	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-	            res.send(body);
-	        } else {
-	            res.status(400).send(error);
-	        }
-
-	    });
-	});
-
-	app.post('/api/claimnumber', function(req, res) {
-	    var claimNumber = req.body.claimNumber;
-	    request.post({
-	        url: process.env.CREATE_CLAIM_API + claimNumber,
-	        headers: {
-	            'Authorization': req.cookies.authToken
-	        },
-			formData: {
-	           'propertyData': parsedEnvData
-	        }
-	    }, function(error, response, body) {
-
-	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
-	            res.send(body);
-	        } else {
-	            res.status(400).send(error);
-	        }
-
-	    });
-	});
-
-	app.post('/api/createCase', function(req, res) {		
-	    var username = process.env.CASEMANAGER_USERNAME;
-	    var password = process.env.CASEMANAGER_PASSWORD;
-	    var options = {
-	        url: process.env.IBM_CREATE_CASE_API,
-	        headers: {
-	            'Content-type': 'application/json',
-	            'Access-Control-Allow-Credential': 'true',
-	            'Authorization': req.cookies.authToken
-	        },
-	        auth: {
-	            user: username,
-	            password: password
-	        },
-	        method: 'POST',
-	        json: req.body
-	    }
-	    request(options, function(error, response, body) {
-	        if (response.statusCode == 200 || response.statusCode == 201) {
-	            res.send(body);
-	        } else {
-	            res.status(401).send(error);
-	        }
-
-	    });
-	});
-
-
-
 	let authenticator;
 	if (process.env.ASSISTANT_IAM_APIKEY) {
 	    authenticator = new IamAuthenticator({
@@ -412,4 +151,190 @@
 	    );
 	});
 
+	const storage = multer.diskStorage({
+		
+	    destination: process.env.MULTER_DESTINATION,
+	    filename: function(req, file, cb) {
+			console.log('inside Storage');			
+	        cb(null, file.originalname);
+	    }
+	});
+
+	const upload = multer({
+	    storage: storage
+	}).single('filename');
+
+	app.post('/api/upload', (req, res) => {
+	    var filep = "";
+		console.log('inside Upload APi');
+	    upload(req, res, (err) => {
+	        if (err) {
+	            return res.status(400).send(err);
+	        } else {		
+		console.log('inside upload method');		
+	            if (req.file === undefined) {
+					return res.send('not selecting files');
+	            }
+	            filep = path.join(__dirname, "./public/uploads/" + req.file.filename);
+	            var claimNumber = JSON.parse(req.body.claimNumber);
+	            const options = {
+	                method: "POST",
+	                url: process.env.FILE_UPLOAD_API,
+	                headers: {
+	                    "Content-Type": "multipart/form-data",
+	                    'Authorization': req.cookies.authToken
+	                },
+	                formData: {
+	                    "uploadFile": fs.createReadStream(filep),
+	                    "claimNumber": claimNumber.claimNumber,
+	                    "fileName": req.file.filename,
+	           			"propertyData": parsedEnvData
+	                }
+	            };
+	            request(options, function(err, httpResponse, body) {
+	                if (err)
+	                    return res.status(400).send(err);
+	                else
+	                    return res.send(body);
+	            });
+	            fs.unlink(filep, err => console.log(err));
+	        }
+	    });
+	});
+	
+	var responseData='';
+	var callSearchApi = async function(req, res, next) {
+		var searchAction =req.query.searchAction;
+		var claimNumber=req.query.claimNumber;
+		var actionTaken = searchAction.toString().toUpperCase();
+		var docApi = process.env[`${actionTaken}_API`];
+		var url = searchAction === 'documentSearch' ?  docApi : process.env.SEARCH_API;
+		request.post({
+	        url: url,
+	        headers: {
+	            'Authorization': token
+			},
+			formData: {	                    
+	                    "claimNumber": claimNumber,
+						"searchAction": actionTaken,
+	           			"propertyData": parsedEnvData
+	        }
+	    }, async function(error, response, body) {
+	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
+				responseData = await JSON.parse(body);				
+				next();
+	        } else {
+				res.status(401).send('auth failed');
+	        }
+	    });
+	};
+
+	app.post('/api/search', (req, res) => {
+		var tokenUpdated = token.replace('==', '');
+	    var encryptedStr = req.cookies[tokenUpdated];
+	    res.send(encryptedStr)
+	});
+	
+	var verifyToken = function(req, res, next) {
+	    var tokenStr = req.cookies.authToken;
+	    var urlToken = req.query.token;
+	    if (tokenStr == undefined || urlToken == undefined) {
+	        res.status(401).send('Your dont have permissions to access this page');
+	    } else if (tokenStr == null || urlToken == null) {
+	        res.status(401).send('Your dont have permissions to access this page');
+	    } else {
+	        var tokenUpdated = tokenStr.replace('==', '');
+	        var encryptedStr = req.cookies[tokenUpdated];
+	        if (encryptedStr.trim() != urlToken.trim()) {
+	            res.status(401).send('Your dont have permissions to access this page');
+	        } else {
+	            next();
+	        }
+	    }
+	}
+
+	app.get('/search', verifyToken, callSearchApi,(req, res) => {
+			var searchAction =req.query.searchAction;
+			var actionTaken = searchAction.toString().toUpperCase();
+		    var symbolicName = process.env[`${actionTaken}_SYMBOLIC_NAME`].toString().split(',');
+			var columnHeader = process.env[`${actionTaken}_HEADERS`].toString().split(',');
+			var title = process.env[`${actionTaken}_TITLE`];
+			var exportFlag = process.env[`${actionTaken}_EXPORTFLAG`];
+			res.render('Search', {
+			        'search': responseData,
+			        'symbolicName': symbolicName,
+					'columnHeader': columnHeader,
+					'Title': title,
+					'exportButtonFlag': exportFlag
+			});	
+	});
+
+	app.post('/api/validateclaim', function(req, res) {
+	    var claimNumber = req.body.claimNumber;
+	    request.post({
+	        url: process.env.VALIDATE_CLAIM_API + claimNumber,
+	        headers: {
+	            'Authorization': req.cookies.authToken
+	        },
+			formData: {
+	           'propertyData': parsedEnvData
+	        }
+	    }, function(error, response, body) {
+	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
+	            res.send(body);
+	        } else {
+	            res.status(400).send(error);
+	        }
+
+	    });
+	});
+
+	app.post('/api/claimnumber', function(req, res) {
+	    var claimNumber = req.body.claimNumber;
+	    request.post({
+	        url: process.env.CREATE_CLAIM_API + claimNumber,
+	        headers: {
+	            'Authorization': req.cookies.authToken
+	        },
+			formData: {
+	           'propertyData': parsedEnvData
+	        }
+	    }, function(error, response, body) {
+
+	        if (!error && (response.statusCode == 200 || response.statusCode == 201)) {
+	            res.send(body);
+	        } else {
+	            res.status(400).send(error);
+	        }
+
+	    });
+	});
+
+	app.post('/api/createCase', function(req, res) {		
+	    var username = process.env.CASEMANAGER_USERNAME;
+	    var password = process.env.CASEMANAGER_PASSWORD;
+	    var options = {
+	        url: process.env.IBM_CREATE_CASE_API,
+	        headers: {
+	            'Content-type': 'application/json',
+	            'Access-Control-Allow-Credential': 'true',
+	            'Authorization': req.cookies.authToken
+	        },
+	        auth: {
+	            user: username,
+	            password: password
+	        },
+	        method: 'POST',
+	        json: req.body
+	    }
+	    request(options, function(error, response, body) {
+	        if (response.statusCode == 200 || response.statusCode == 201) {
+	            res.send(body);
+	        } else {
+	            res.status(401).send(error);
+	        }
+
+	    });
+	});
+	
 	module.exports = app;
