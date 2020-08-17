@@ -209,7 +209,7 @@ var ConversationPanel = (function() {
                     };
                     var params = JSON.stringify(jsonObj);
                     http.send(params);
-                } else if (responses[0].innerhtml === "Please upload your document") {
+                } else if (responses[0].innerhtml === "Choose and upload document below") {
                     flag = false;
                     var documnetDiv = document.createElement('div');
                     documnetDiv.setAttribute("id", "myDiv");
@@ -275,7 +275,7 @@ var ConversationPanel = (function() {
                     }, 1000);
 
                     document.getElementById("uploadButton").addEventListener("click", fileToApp);
-                } else if (responses[0].innerhtml.includes('Please wait your document is being attached to claim number')) {
+                } else if (responses[0].innerhtml.includes('Please wait your document is being linked to claim number')) {
                     flag = true;
                     sendMessage(docId);
                 } else if (responses[0].innerhtml.includes("Thanks")) {
